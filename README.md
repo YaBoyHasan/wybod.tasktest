@@ -119,4 +119,3 @@ It provides a complete workflow for creating, organizing, and managing tasks wit
 ```bash
 cd Wybod.TaskTest
 dotnet run
-# Visit https://localhost:7067/swagger
