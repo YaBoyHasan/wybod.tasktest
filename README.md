@@ -1,127 +1,122 @@
-# Task Manager - Take Home Test
+# 🧩 Task Management Application
 
-Welcome! This take-home test is designed to assess your full-stack development skills using C# and Vue.js.
+A fully functional **Task Management App** built with **ASP.NET Core (C#)** and **Vue.js 3 + TypeScript**.  
+It provides a complete workflow for creating, organizing, and managing tasks with advanced filtering, search, and smooth UX.
 
-## Prerequisites
+---
 
-Before you begin, ensure you have the following installed:
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- Your preferred IDE (Visual Studio, VS Code, Rider, etc.)
+## 🚀 Features Overview
 
-## Getting Started
+### ✅ Core Features
+#### 📝 Task Creation & Management
+- Create tasks with **title**, **description**, **due date**, **priority**, and **tags**
+- Toggle task **complete/incomplete** instantly
+- Delete tasks with confirmation prompt
+- Visual feedback using **toast notifications** for all actions
 
-### 1. Clone the Repository
+#### 🔍 Task Filtering & Search
+- Filter by **status:** All, Completed, Pending, Overdue  
+- Filter by **priority:** All, High, Medium, Low  
+- Real-time **search** across title, description, and tags  
+- **Sort by:** Latest (default), Title, Priority, Due Date  
+- One-click **clear filters**
+
+#### 📄 Task Details Page
+- Dedicated **detail view** for each task  
+- Displays all task metadata (dates, priority, tags, overdue status)  
+- Quick actions: toggle completion or delete  
+- Accessible by clicking any task card
+
+---
+
+## 🌟 Stretch Features
+### 🧠 Enhanced Task Functionality
+- **Due dates** with red highlighting for overdue tasks  
+- **Priority levels** (Low, Medium, High) with color coding  
+- **Tags/categories** for better organization  
+- **Computed overdue status** for incomplete overdue tasks
+
+### 💎 User Experience Enhancements
+- **Toast notifications** for success/error feedback  
+- **Smooth animations & transitions** throughout  
+- **Loading spinners** for async states  
+- **Hover effects** on interactive elements  
+- **Keyboard shortcuts**
+  - `Ctrl + N` → Focus on new task input  
+  - `Ctrl + F` or `/` → Focus on search  
+- Active filter highlighting  
+- Live **task count display**  
+- Fully **responsive design**
+
+---
+
+## 🧱 Architecture & Code Quality
+
+### 🔧 Backend (C# / ASP.NET Core)
+- `Controller → Service → Repository` clean separation  
+- Central **TaskService** for business logic  
+- **Error handling** & validation  
+- Search, filter, and sorting support  
+- New `PATCH` endpoint for toggling task completion  
+- **Enhanced Task model:**
+  - `Priority` enum  
+  - `Tags`, `DueDate`, `IsOverdue` (computed property)
+
+### 🧩 Frontend (Vue.js 3 + TypeScript)
+- **Modular, component-based** architecture  
+  - `TaskCard` — reusable card component  
+  - `TaskCreateForm` — dedicated form component  
+  - `TaskFilters` — comprehensive filtering controls  
+  - `ToastContainer` — global notification system  
+- **Custom composables**
+  - `useToast` — notification management  
+  - `useKeyboardShortcuts` — global keyboard bindings  
+- Organized, **type-safe**, and clean structure  
+- Styled with **Tailwind CSS**
+
+---
+
+## 🧪 Testing
+
+### ✅ Coverage Summary
+- **35 tests total**
+  - **Backend:** 20+ unit tests for `TaskService` & `TaskRepository`
+  - **Frontend:** 15+ component tests for UI and logic
+- **All tests passing**
+- Covers edge cases, error handling, and UI interactions
+
+---
+
+## 🎨 Design & UX
+
+- Modern, clean interface using **blue/green/gray** palette  
+- Consistent **spacing & typography**  
+- Clear **visual hierarchy**  
+- Accessible contrast ratios  
+- Smooth **micro-interactions** & transitions  
+- **Card-based layout** for easy task scanning  
+- Friendly **empty states** and **loading indicators**
+
+---
+
+## ⚙️ Technical Stack
+
+| Layer | Technology |
+|-------|-------------|
+| Frontend | Vue.js 3 + TypeScript |
+| Styling | Tailwind CSS |
+| Build Tool | Vite |
+| Backend | ASP.NET Core (C#) |
+| Architecture | RESTful API + Component-based Frontend |
+| Tests | xUnit / Vue Test Utils |
+| Deployment | Ready for production build |
+
+---
+
+## 🏁 Getting Started
+
+### 1️⃣ Backend
 ```bash
-git clone <repository-url>
-cd TakeHomeTest/Wybod.TaskTest
-```
-
-### 2. Install Frontend Dependencies
-```bash
-cd ClientApp
-npm install
-cd ..
-```
-
-### 3. Run the Application
-```bash
+cd Wybod.TaskTest
 dotnet run
-```
-
-The application will start and automatically launch the Vue.js development server. Navigate to `https://localhost:7067` in your browser.
-
-### 4. Run Tests
-```bash
-# Backend tests (if you add any)
-dotnet test
-
-# Frontend tests
-cd ClientApp
-npm test
-```
-
-## Project Structure
-
-```
-Wybod.TaskTest/
-├── Controllers/          # API controllers
-├── Data/
-│   ├── Models/          # Domain models
-│   └── Repositories/    # Data access layer
-├── ClientApp/           # Vue.js application
-│   ├── src/
-│   │   ├── components/  # Reusable components
-│   │   ├── views/       # Page components
-│   │   └── router/      # Route configuration
-│   └── package.json
-└── Program.cs           # Application entry point
-```
-
-## Your Task
-
-Build a fully functional task management application. The foundation has been laid, but key features are missing.
-
-### Core Features
-
-1. **Task Creation**
-   - Users should be able to create new tasks with a title and description
-   - New tasks should appear in the task list
-
-2. **Task Management**
-   - Users should be able to mark tasks as complete or incomplete
-   - Users should be able to delete tasks they no longer need
-
-3. **Task Filtering**
-   - Users should be able to filter the task list by status (All, Completed, Pending)
-   - The UI should clearly show which filter is active
-
-4. **Task Details Page**
-   - Users should be able to view the full details of any task
-   - Clicking on a task should navigate to a dedicated detail page
-   - The detail page should show all task information
-
-5. **Code Quality**
-   - Refactor the codebase to follow best practices
-   - Add appropriate test coverage for new features
-
-### Stretch Features (Optional - Pick Any)
-
-6. **Advanced Search & Filtering**
-   - Search tasks by title or description
-   - Sort tasks by date, title, or status
-   - Combine multiple filters
-
-7. **Enhanced Task Features**
-   - Add due dates to tasks with overdue indicators
-   - Add priority levels (High, Medium, Low)
-   - Add categories or tags for better organization
-
-8. **User Experience**
-   - Add visual feedback for all actions (loading states, success/error messages)
-   - Implement animations and transitions
-   - Add keyboard shortcuts for common actions
-
-## What we'd like to see
-
-- **Commit Regularly**: We want to see your thought process. Commit early and often
-- **Show Your Skills**: Feel free to 'overengineer' - this is your chance to demonstrate what you can do
-- **Both Frontend and Backend**: Ensure you showcase skills in both areas
-- **Time Estimate**: 2-3 hours
-
-## Evaluation Criteria
-
-We'll be looking at:
-- Code quality, organisation, and readability
-- Problem-solving approach
-- UI design and implementation - feel free to use prebuilt components such as shadcn-vue
-- Understanding of C# and Vue.js best practices
-- Testing strategy
-- User experience considerations
-- Git commit history and messages
-
-## Questions?
-
-If you have any questions or run into issues, please reach out to us.
-
-Good luck! We're excited to see what you build.
+# Visit https://localhost:7067/swagger
