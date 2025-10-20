@@ -1,216 +1,157 @@
 <template>
-    <div class="p-4">
-        <!-- Controls -->
-        <div class="mb-6 flex flex-col gap-3">
-            <form class="flex flex-wrap gap-2" @submit.prevent="onCreate">
-                <input v-model="title"
-                       class="border px-3 py-2 rounded w-56 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                       placeholder="Title"
-                       required />
-                <input v-model="desc"
-                       class="border px-3 py-2 rounded w-80 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                       placeholder="Description (optional)" />
-                <button :disabled="busy"
-                        class="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 active:scale-95 transition-all">
-                    Add
-                </button>
-            </form>
+    <div class="p-6 max-w-7xl mx-auto">
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Task Manager</h1>
+            <p class="text-gray-600">Organize and track your tasks efficiently</p>
+        </div>
 
-            <div class="flex gap-2">
-                <button :class="[
-            'px-3 py-1 rounded transition-all duration-200',
-            filter==='' ? 'bg-gray-900 text-white shadow' : 'bg-gray-200 hover:bg-gray-300'
-          ]"
-                        @click="setFilter('')">
-                    All
-                </button>
-                <button :class="[
-            'px-3 py-1 rounded transition-all duration-200',
-            filter==='completed' ? 'bg-green-600 text-white shadow' : 'bg-gray-200 hover:bg-gray-300'
-          ]"
-                        @click="setFilter('completed')">
-                    Completed
-                </button>
-                <button :class="[
-            'px-3 py-1 rounded transition-all duration-200',
-            filter==='pending' ? 'bg-amber-600 text-white shadow' : 'bg-gray-200 hover:bg-gray-300'
-          ]"
-                        @click="setFilter('pending')">
-                    Pending
-                </button>
+        <div class="space-y-6">
+            <TaskCreateForm :busy="busy" @create="handleCreate" />
+
+            <TaskFiltersComponent :filters="filters" @change="handleFilterChange" />
+
+            <div v-if="loading" class="text-center py-16">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-gray-600">Loading tasks...</p>
             </div>
 
-            <p v-if="error" class="text-red-600 text-sm animate-pulse">{{ error }}</p>
-        </div>
-
-        <!-- Loading / Error / Empty -->
-        <div v-if="loading" class="text-center py-8 text-lg text-gray-600 animate-pulse">
-            Loading tasks...
-        </div>
-
-        <div v-else-if="error" class="text-center py-8 text-lg text-red-600">
-            {{ error }}
-        </div>
-
-        <div v-else>
-            <div v-if="tasks.length === 0" class="text-center py-8 text-lg text-gray-500">
-                No tasks yet
+            <div v-else-if="tasks.length === 0" class="text-center py-16">
+                <div class="text-6xl mb-4">📋</div>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">No tasks found</h3>
+                <p class="text-gray-500">
+                    {{ filters.search || filters.status || filters.priority !== undefined
+                        ? 'Try adjusting your filters'
+                        : 'Create your first task to get started'
+                    }}
+                </p>
             </div>
 
-            <!-- Task Cards -->
-            <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <Card v-for="task in tasks"
-                      :key="task.id"
-                      class="transition-transform hover:-translate-y-1 hover:shadow-lg duration-200">
-                    <CardHeader>
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <CardTitle>{{ task.title }}</CardTitle>
-                                <CardDescription>{{ task.description }}</CardDescription>
-                            </div>
+            <div v-else>
+                <div class="mb-4 text-sm text-gray-600">
+                    Showing {{ tasks.length }} task{{ tasks.length !== 1 ? 's' : '' }}
+                </div>
 
-                            <div class="flex flex-col items-end gap-2">
-                                <span :class="[
-                    'px-3 py-1 rounded-full text-xs font-bold shadow-sm',
-                    task.isCompleted ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'
-                  ]">
-                                    {{ task.isCompleted ? 'Completed' : 'Pending' }}
-                                </span>
-
-                                <div class="flex gap-2">
-                                    <button class="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all"
-                                            :disabled="busy"
-                                            @click="toggle(task)">
-                                        {{ task.isCompleted ? 'Mark Pending' : 'Mark Done' }}
-                                    </button>
-
-                                    <button class="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 active:scale-95 transition-all"
-                                            :disabled="busy"
-                                            @click="removeTask(task.id)">
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </CardHeader>
-
-                    <CardContent>
-                        <div class="flex gap-5 text-xs text-gray-500">
-                            <small>Created: {{ formatDate(task.createdAt) }}</small>
-                            <small v-if="task.completedAt">Completed: {{ formatDate(task.completedAt!) }}</small>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <TaskCard v-for="task in tasks"
+                              :key="task.id"
+                              :task="task"
+                              :busy="busy"
+                              @click="handleViewDetails(task.id)"
+                              @toggle="handleToggle(task)"
+                              @delete="handleDelete(task.id)" />
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-    import { ref, onMounted } from 'vue'
-    import { getTasks, createTask, updateTask, deleteTask, type TaskItem } from '@/api'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getTasks, createTask, toggleTask, deleteTask, type TaskItem, type TaskFilters } from '@/api'
+import { useToast } from '@/composables/useToast'
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
+import TaskCreateForm from '@/components/TaskCreateForm.vue'
+import TaskFiltersComponent from '@/components/TaskFilters.vue'
+import TaskCard from '@/components/TaskCard.vue'
 
-    import Card from '@/components/ui/Card.vue'
-    import CardHeader from '@/components/ui/CardHeader.vue'
-    import CardTitle from '@/components/ui/CardTitle.vue'
-    import CardDescription from '@/components/ui/CardDescription.vue'
-    import CardContent from '@/components/ui/CardContent.vue'
+const router = useRouter()
+const { success, error: showError } = useToast()
 
-    const tasks = ref<TaskItem[]>([])
-    const loading = ref(true)
-    const busy = ref(false)
-    const error = ref<string | null>(null)
-    const filter = ref<'' | 'completed' | 'pending'>('')
+const tasks = ref<TaskItem[]>([])
+const loading = ref(true)
+const busy = ref(false)
+const filters = ref<TaskFilters>({})
 
-    const title = ref('')
-    const desc = ref('')
-
-    const load = async () => {
-        loading.value = true
-        error.value = null
-        try {
-            tasks.value = await getTasks(filter.value || undefined)
-        } catch (e: any) {
-            error.value = e?.message || 'Failed to load'
-        } finally {
-            loading.value = false
-        }
+const load = async () => {
+    loading.value = true
+    try {
+        tasks.value = await getTasks(filters.value)
+    } catch (e: any) {
+        showError(e?.message || 'Failed to load tasks')
+    } finally {
+        loading.value = false
     }
+}
 
-    const setFilter = (f: '' | 'completed' | 'pending') => {
-        filter.value = f
-        load()
+const handleCreate = async (data: any) => {
+    busy.value = true
+    try {
+        await createTask(data.title, data.description, data.dueDate, data.priority, data.tags)
+        success('Task created successfully!')
+        await load()
+    } catch (e: any) {
+        showError(e?.message || 'Failed to create task')
+    } finally {
+        busy.value = false
     }
+}
 
-    const onCreate = async () => {
-        if (!title.value.trim()) return
-        busy.value = true
-        error.value = null
-        try {
-            await createTask(title.value.trim(), desc.value.trim() || undefined)
-            title.value = ''
-            desc.value = ''
-            await load()
-        } catch (e: any) {
-            error.value = e?.message || 'Create failed'
-        } finally {
-            busy.value = false
-        }
+const handleToggle = async (task: TaskItem) => {
+    busy.value = true
+    try {
+        await toggleTask(task.id)
+        success(task.isCompleted ? 'Task marked as pending' : 'Task completed!')
+        await load()
+    } catch (e: any) {
+        showError(e?.message || 'Failed to update task')
+    } finally {
+        busy.value = false
     }
+}
 
-    const toggle = async (t: TaskItem) => {
-        busy.value = true
-        error.value = null
-        try {
-            await updateTask(t.id, {
-                ...t,
-                isCompleted: !t.isCompleted,
-                title: t.title,
-                description: t.description
-            })
-            await load()
-        } catch (e: any) {
-            error.value = e?.message || 'Update failed'
-        } finally {
-            busy.value = false
-        }
+const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this task?')) return
+
+    busy.value = true
+    try {
+        await deleteTask(id)
+        success('Task deleted successfully')
+        await load()
+    } catch (e: any) {
+        showError(e?.message || 'Failed to delete task')
+    } finally {
+        busy.value = false
     }
+}
 
-    const removeTask = async (id: string) => {
-        if (!confirm('Delete this task?')) return
-        busy.value = true
-        error.value = null
-        try {
-            await deleteTask(id)
-            await load()
-        } catch (e: any) {
-            error.value = e?.message || 'Delete failed'
-        } finally {
-            busy.value = false
-        }
+const handleViewDetails = (id: string) => {
+    router.push(`/task/${id}`)
+}
+
+const handleFilterChange = (newFilters: TaskFilters) => {
+    filters.value = newFilters
+    load()
+}
+
+useKeyboardShortcuts([
+    {
+        key: 'n',
+        ctrl: true,
+        handler: () => {
+            const titleInput = document.querySelector('input[type="text"]') as HTMLInputElement
+            titleInput?.focus()
+        },
+        description: 'Focus on new task input'
+    },
+    {
+        key: 'f',
+        ctrl: true,
+        handler: () => {
+            const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement
+            searchInput?.focus()
+        },
+        description: 'Focus on search'
+    },
+    {
+        key: '/',
+        handler: () => {
+            const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement
+            searchInput?.focus()
+        },
+        description: 'Focus on search'
     }
+])
 
-    const formatDate = (dateString: string): string =>
-        new Date(dateString).toLocaleString()
-
-    onMounted(load)
+onMounted(load)
 </script>
-
-<style scoped>
-    /* subtle entry animation for cards */
-    @keyframes fadeUp {
-        0% {
-            opacity: 0;
-            transform: translateY(8px);
-        }
-
-        100% {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    Card {
-        animation: fadeUp 0.3s ease both;
-    }
-</style>

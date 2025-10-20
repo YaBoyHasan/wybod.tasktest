@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Wybod.TaskTest.Data.Models;
-using Wybod.TaskTest.Data.Repositories;
+using Wybod.TaskTest.Services;
 
 namespace Wybod.TaskTest.Controllers;
 
@@ -8,70 +8,76 @@ namespace Wybod.TaskTest.Controllers;
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
-    private readonly ITaskRepository _repository;
-    public TasksController(ITaskRepository repository) => _repository = repository;
+    private readonly ITaskService _taskService;
+    public TasksController(ITaskService taskService) => _taskService = taskService;
 
-    // GET /api/tasks?status=completed|pending
     [HttpGet]
-    public IActionResult GetTasks([FromQuery] string? status)
+    public IActionResult GetTasks([FromQuery] string? status, [FromQuery] string? search, [FromQuery] string? priority, [FromQuery] string? sortBy)
     {
-        // Filter tasks based on status query parameter
-        var items = _repository.GetAll();
-        
-        // Apply filtering
-        items = status?.ToLower() switch
+        var tasks = _taskService.GetAllTasks(status, search);
+
+        if (!string.IsNullOrWhiteSpace(priority) && Enum.TryParse<TaskPriority>(priority, true, out var parsedPriority))
         {
-            "completed" => items.Where(t => t.IsCompleted),
-            "pending" => items.Where(t => !t.IsCompleted),
-            _ => items
+            tasks = tasks.Where(t => t.Priority == parsedPriority);
+        }
+
+        tasks = sortBy?.ToLower() switch
+        {
+            "title" => tasks.OrderBy(t => t.Title),
+            "priority" => tasks.OrderByDescending(t => t.Priority).ThenBy(t => t.Title),
+            "duedate" => tasks.OrderBy(t => t.DueDate ?? DateTime.MaxValue),
+            _ => tasks.OrderByDescending(t => t.CreatedAt)
         };
 
-        // Return the filtered list
-        return Ok(items);
+        return Ok(tasks);
     }
 
-    // GET /api/tasks/{id}
     [HttpGet("{id:guid}")]
     public IActionResult GetTask(Guid id)
-        => _repository.GetById(id) is { } t ? Ok(t) : NotFound();
+        => _taskService.GetTaskById(id) is { } t ? Ok(t) : NotFound();
 
-    // POST /api/tasks
     [HttpPost]
     public IActionResult CreateTask([FromBody] TaskItem dto)
     {
-        // Basic validation
-        if (string.IsNullOrWhiteSpace(dto.Title))
-            return BadRequest("Title is required");
-
-        // Create new task
-        var created = _repository.Create(new TaskItem
+        try
         {
-            Title = dto.Title,
-            Description = dto.Description,
-            IsCompleted = dto.IsCompleted
-        });
-
-        // Return 201 Created with location header (successful creation)
-        return CreatedAtAction(nameof(GetTask), new { id = created.Id }, created);
+            var created = _taskService.CreateTask(
+                dto.Title,
+                dto.Description,
+                dto.DueDate,
+                dto.Priority,
+                dto.Tags
+            );
+            return CreatedAtAction(nameof(GetTask), new { id = created.Id }, created);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
-    // PUT /api/tasks/{id}
     [HttpPut("{id:guid}")]
     public IActionResult UpdateTask(Guid id, [FromBody] TaskItem dto)
     {
-        // Basic validation
-        if (string.IsNullOrWhiteSpace(dto.Title))
-            return BadRequest("Title is required");
-
-        // Update existing task
-        var ok = _repository.Update(id, dto);
-
-        // Return 204 No Content if successful, 404 Not Found if task doesn't exist
-        return ok ? NoContent() : NotFound();
+        try
+        {
+            var success = _taskService.UpdateTask(id, dto);
+            return success ? NoContent() : NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
-    // DELETE /api/tasks/{id}
+    [HttpPatch("{id:guid}/toggle")]
+    public IActionResult ToggleTask(Guid id)
+    {
+        var success = _taskService.ToggleTaskCompletion(id);
+        return success ? NoContent() : NotFound();
+    }
+
     [HttpDelete("{id:guid}")]
     public IActionResult DeleteTask(Guid id)
-        => _repository.Delete(id) ? NoContent() : NotFound();
+        => _taskService.DeleteTask(id) ? NoContent() : NotFound();
 }
