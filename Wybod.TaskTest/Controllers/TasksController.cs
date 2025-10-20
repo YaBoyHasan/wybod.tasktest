@@ -9,43 +9,69 @@ namespace Wybod.TaskTest.Controllers;
 public class TasksController : ControllerBase
 {
     private readonly ITaskRepository _repository;
+    public TasksController(ITaskRepository repository) => _repository = repository;
 
-    public TasksController(ITaskRepository repository)
-    {
-        _repository = repository;
-    }
-
+    // GET /api/tasks?status=completed|pending
     [HttpGet]
-    public ActionResult<IEnumerable<TaskItem>> GetTasks()
+    public IActionResult GetTasks([FromQuery] string? status)
     {
-        return Ok(_repository.GetAll());
+        // Filter tasks based on status query parameter
+        var items = _repository.GetAll();
+        
+        // Apply filtering
+        items = status?.ToLower() switch
+        {
+            "completed" => items.Where(t => t.IsCompleted),
+            "pending" => items.Where(t => !t.IsCompleted),
+            _ => items
+        };
+
+        // Return the filtered list
+        return Ok(items);
     }
 
+    // GET /api/tasks/{id}
     [HttpGet("{id:guid}")]
-    public ActionResult<TaskItem> GetTask(Guid id)
-    {
-        // TODO: Implement
-        throw new NotImplementedException();
-    }
+    public IActionResult GetTask(Guid id)
+        => _repository.GetById(id) is { } t ? Ok(t) : NotFound();
 
+    // POST /api/tasks
     [HttpPost]
-    public ActionResult<TaskItem> CreateTask(TaskItem task)
+    public IActionResult CreateTask([FromBody] TaskItem dto)
     {
-        // TODO: Implement
-        throw new NotImplementedException();
+        // Basic validation
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            return BadRequest("Title is required");
+
+        // Create new task
+        var created = _repository.Create(new TaskItem
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            IsCompleted = dto.IsCompleted
+        });
+
+        // Return 201 Created with location header (successful creation)
+        return CreatedAtAction(nameof(GetTask), new { id = created.Id }, created);
     }
 
+    // PUT /api/tasks/{id}
     [HttpPut("{id:guid}")]
-    public IActionResult UpdateTask(Guid id, TaskItem task)
+    public IActionResult UpdateTask(Guid id, [FromBody] TaskItem dto)
     {
-        // TODO: Implement
-        throw new NotImplementedException();
+        // Basic validation
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            return BadRequest("Title is required");
+
+        // Update existing task
+        var ok = _repository.Update(id, dto);
+
+        // Return 204 No Content if successful, 404 Not Found if task doesn't exist
+        return ok ? NoContent() : NotFound();
     }
 
+    // DELETE /api/tasks/{id}
     [HttpDelete("{id:guid}")]
     public IActionResult DeleteTask(Guid id)
-    {
-        // TODO: Implement
-        throw new NotImplementedException();
-    }
+        => _repository.Delete(id) ? NoContent() : NotFound();
 }
